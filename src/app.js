@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+import Wrapper from './components/Wrapper';
 import 'normalize.css/normalize.css';
 import './styles/styles.scss';
 
-ReactDOM.render(<h1>Hello, world!</h1>, document.getElementById("app"));
+ReactDOM.render(<Wrapper />, document.getElementById("app"));
