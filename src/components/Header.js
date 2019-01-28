@@ -25,7 +25,8 @@ export default class Header extends React.Component {
                             <NavItem>
                                 <NavLink
                                     className="button-nav-link"
-                                    onClick={this.props.changeLang}>Español
+                                    onClick={this.props.changeLang}>
+                                    {`${this.props.lang === 'es'? 'English' : 'Spanish'}`}
                                 </NavLink>
                             </NavItem>
                         </Nav>
@@ -35,4 +36,8 @@ export default class Header extends React.Component {
         )
     }
 
+}
+
+Header.defaultProps = {
+    lang: 'es'
 }

@@ -40,6 +40,7 @@ export default class Wrapper extends React.Component {
         },
         moveToResults: false,
         results: [],
+        simpleLang: 'es',
         selected: -1,
         selectionChange: false,
         status: 0, // 0 - searching, 1 - navigating, 2 - reading article
@@ -62,20 +63,33 @@ export default class Wrapper extends React.Component {
                     let r = new Result(res[1][i], res[2][i], res[3][i], this.state.lang);
                     results.push(r);
                 }
-                
-                let voice = `Buscando ${res[0]} en Wikipedia...Se obtuvieron ${numberOfResults} resultados. `;
-                if ( numberOfResults > 0 ) {
-                    this.setState({ results: results, status: 1, moveToResults: true });
-                    voice += `Para navegar en los resultados, usa las flechas de arriba o abajo y presiona la tecla intro cuando escuches el resultado en el que estás interesado para conocer más acerca de él. Para volver a buscar, presiona la tecla escape`;
+
+                if (lang === 'es') {
+                    let voice = `Buscando ${res[0]} en Wikipedia...Se obtuvieron ${numberOfResults} resultados. `;
+                    if (numberOfResults > 0) {
+                        this.setState({ results: results, status: 1, moveToResults: true });
+                        voice += `Para navegar en los resultados, usa las flechas de arriba o abajo y presiona la tecla intro cuando escuches el resultado en el que estás interesado para conocer más acerca de el. Para volver a buscar, presiona la tecla escape`;
+                    } else {
+                        voice += "Al no haber resultados se ha limpiado el texto a buscar. Por favor realiza otra búsqueda";
+                        this.setState({ results: [], status: 0, value: '' });
+                    }
+                    this.switchBuffersSimple(voice);
                 } else {
-                    voice += "Al no haber resultados se ha limpiado el texto a buscar. Por favor realiza otra búsqueda";
-                    this.setState({ results: [], status: 0, value: '' });
+                    let voice = `Searching ${res[0]} on Wikipedia...${numberOfResults} results were obtained. `;
+                    if (numberOfResults > 0) {
+                        this.setState({ results: results, status: 1, moveToResults: true });
+                        voice += `To navigate through the results, use the up and down arrow keys. Then press the intro key when you heard the article you are interested in to know more about it. To make another search, press the espace key.`;
+                    } else {
+                        voice += "Due to the lack of results, the search has been deleted. Please make a new search";
+                        this.setState({ results: [], status: 0, value: '' });
+                    }
+                    this.switchBuffersSimple(voice);
                 }
-                this.switchBuffersSimple(voice);
 
             })
             .catch((err) => {
-                this.switchBuffersSimple(`Hubo un error al procesar tu petición. Intentalo nuevamente`);
+                const message = this.getMessageFromObjectString('errors.fetchData');
+                this.switchBuffersSimple(message);
             });
     }
 
@@ -96,23 +110,31 @@ export default class Wrapper extends React.Component {
                     content: article,
                     title: titles
                 }
-                let voice = `Voy a proceder a leer el articulo ${titles}. Si deseas que me detenga, oprime la tecla escape. ${article}`;
+                let voice = (this.state.simpleLang === "es") ? `Voy a proceder a leer el articulo ${titles}. Si deseas que me detenga, oprime la tecla escape. ${article}` : `I'm going to read the ${titles} article. If you want me to stop. Press the escape key. ${article}`
                 this.setState({
                     modal: modal,
                     status: 2
                 });
                 this.switchBuffersSimple(voice);
+
             }, titles)
             .catch((err) => {
                 console.log(err);
             });
     }
 
+    /**
+     * Handles the change of language
+     */
     changeLang = () => {
         let lang = (this.state.lang === 'es-MX')? 'en-EN' : 'es-MX';
+        let simpleLang = (this.state.lang === 'es-MX') ? 'en' : 'es';
         this.setState({
-            lang: lang
+            lang: lang,
+            simpleLang: simpleLang
         });
+        const message = this.getMessageFromObjectString('notifications.langChange');
+        this.switchBuffersSimple(message, lang);
     }
 
     /**
@@ -133,7 +155,7 @@ export default class Wrapper extends React.Component {
         this.setState({
             introduction: {
                 play: false, //TODO reset to true
-                content: this.props.intro.es,
+                content: this.getMessageFromObjectString(`introduction`),
             }
         });
     }
@@ -152,11 +174,21 @@ export default class Wrapper extends React.Component {
     }
 
     /**
+     * @return String with the message to send to some buffer
+     */
+    getMessageFromObjectString(objectString) {
+        const key = `${this.state.simpleLang}.${objectString}`;
+        const element = key.split(".").reduce(function (o, x) { return (o[x] !== null) ? o[x] : '' }, this.props.data);
+        return (element) ? element : '';
+    }
+
+    /**
      * Method that handles the search event
      */
     makeSearch = () => {
         if ( this.state.value.trim().length === 0 ) {
-            this.switchBuffersSimple("No has ingresado nada para buscar");
+            const message = this.getMessageFromObjectString('errors.emptySearch');
+            this.switchBuffersSimple(message);
         } else {
             this.callWiki();
         }
@@ -221,6 +253,9 @@ export default class Wrapper extends React.Component {
      * Event binder to handle all the special keys
      */
     onKeyDown = (e) => {
+
+        console.log(e.keyCode);
+
         // Handle delete
         if (e.keyCode === 8 && this.state.value.length > 0) {
             this.switchBuffersSimple("delete", "en-US");
@@ -232,16 +267,23 @@ export default class Wrapper extends React.Component {
                 this.makeSearch();
             } else if (this.state.status === 1) {
                 if ( this.state.selected == -1 ) {
-                    this.switchBuffersSimple("No has seleccionado ningún artículo");
+                    const message = this.getMessageFromObjectString("errors.emptyArticle");
+                    this.switchBuffersSimple(message);
                 } else {
                     this.callWikiArticle();
                 }
             }
         }
 
+        //Handle shift
+        if (e.keyCode === 16) {
+            this.changeLang();
+        }
+
         // Handle ctrl
         if (e.keyCode === 17) {
-            this.switchBuffersSimple(this.props.intro.es);
+            const message = this.getMessageFromObjectString('introduction');
+            this.switchBuffersSimple(message);
         }
 
         // Handle spacebar
@@ -254,7 +296,8 @@ export default class Wrapper extends React.Component {
         if (e.keyCode === 27) {
             if ( this.state.status === 0 ) {
                 this.setState({ value: "" });
-                this.switchBuffersSimple("Se ha eliminado todo el texto ingresado");
+                const message = this.getMessageFromObjectString('notifications.deleteText');
+                this.switchBuffersSimple(message);
             } else if ( this.state.status === 1 ) {
                 this.setState({ 
                     value: "", 
@@ -262,14 +305,16 @@ export default class Wrapper extends React.Component {
                     status: 0, 
                     selected: -1
                 });
-                this.switchBuffersSimple("Ya puedes volver a hacer otra busqueda");
+                const message = this.getMessageFromObjectString('notifications.searchReady');
+                this.switchBuffersSimple(message);
             } else if ( this.state.status === 2 ) {
                 const modal = {
                     open: false,
                     content: '',
                     title: ''
                 };
-                this.switchBuffersSimple("Hemos regresado a la lista de resultados. Recuerda que debes usar las flechas de arriba y abajo para seleccionar un artículo y dar enter para saber más del que te interese. Si quieres hacer una búsqueda diferente, oprime la tecla escape");
+                const message = this.getMessageFromObjectString('notifications.backToResults');
+                this.switchBuffersSimple(message);
                 this.setState({
                     modal: modal,
                     status: 1,
@@ -326,30 +371,57 @@ export default class Wrapper extends React.Component {
         return (
             <div>
 
-                <Header changeLang={this.changeLang}/>
+                <Header changeLang={this.changeLang} lang={this.state.simpleLang}/>
                 <CustomModal modal={this.state.modal} handleKeyDown={this.onKeyDown}/>
                 <div className="home">
                     <Jumbotron>
-                        <h1 className="display-3">Bienvenido a BlindPedia <FaWikipediaW size={"1.5em"} /></h1>
-                        <p className="lead">Por favor, lee las instrucciones</p>
+                        <h1 className="display-3">{this.getMessageFromObjectString('pageText.welcome')} <FaWikipediaW size={"1.5em"} /></h1>
+                        <p className="lead">{this.getMessageFromObjectString('pageText.readInstructions')}</p>
                         <hr className="my-2" />
                         <div className="lead-2">
-                            <p>En este sitio puedes buscar artículos en wikipedia mediante asistencia auditiva.</p>
+                            <p>{this.getMessageFromObjectString('pageText.about')}</p>
                             <ol className="lead-3">
-                                <li>Para buscar, solo introduce con el teclado tu búsqueda, y pulsa enter para obtener resultados.</li>
-                                <li>Cada vez que introduzcas una palabra, presiona la barra espaciadora para escuchar la última palabra que escribiste.</li>
-                                <li>Si quieres cambiar de idioma a inglés, presiona la tecla shift.</li>
-                                <li>Presiona la tecla escape para borrar todo el texto que has ingresado.</li>
-                                <li>Si necesitas volver a escuchar las intrucciones presiona la tecla control.</li>
+                                {
+                                    this.state.status === 0 &&
+                                    this.state.simpleLang === "es" &&
+                                    this.props.data.es.instructions.a.map((el, i) => 
+                                        <li key={i}>{el}</li>
+                                    )
+                                    
+                                }
+                                {
+                                    this.state.status === 0 &&
+                                    this.state.simpleLang === "en" &&
+                                    this.props.data.en.instructions.a.map((el, i) =>
+                                        <li key={i}>{el}</li>
+                                    )
+
+                                }
+                                {
+                                    this.state.status === 1 &&
+                                    this.state.simpleLang === "es" &&
+                                    this.props.data.es.instructions.b.map((el, i) =>
+                                        <li key={i}>{el}</li>
+                                    )
+
+                                }
+                                {
+                                    this.state.status === 1 &&
+                                    this.state.simpleLang === "en" &&
+                                    this.props.data.en.instructions.b.map((el, i) =>
+                                        <li key={i}>{el}</li>
+                                    )
+
+                                }
                             </ol>
                         </div>
                         <div className="projects">
                             <Card className="iso-blade-card">
                                 <CardBody>
-                                    <CardTitle>Usa el cuadro de texto para realizar tu busqueda</CardTitle>
+                                    <CardTitle>{this.getMessageFromObjectString('search.title')}</CardTitle>
                                     <center>
                                         <InputGroup size="lg">
-                                            <InputGroupAddon addonType="prepend">¿Qué quieres buscar?</InputGroupAddon>
+                                            <InputGroupAddon addonType="prepend">{this.getMessageFromObjectString('search.label')}</InputGroupAddon>
                                             <input className="form-control" ref={(input) => { this.nameInput = input; }}
                                                 onChange={this.onChange}
                                                 onBlur={this.onBlur}
@@ -447,16 +519,20 @@ export default class Wrapper extends React.Component {
             intro.play = false;
             intro.pause = true;
             intro.content = content;
+            intro.lang = this.state.lang;
             keyboard.play = true;
             keyboard.pause = false;
             keyboard.content = content;
+            keyboard.lang = this.state.lang;
         } else {
             intro.play = true;
             intro.pause = false;
             intro.content = content;
+            intro.lang = this.state.lang;
             keyboard.play = false;
             keyboard.pause = true;
             keyboard.content = content;
+            keyboard.lang = this.state.lang;
         }
         this.setState({
             selected: selected,
@@ -504,7 +580,80 @@ export default class Wrapper extends React.Component {
 }
 
 Wrapper.defaultProps = {
-    intro: {
-        es: 'Bienvenido a BlindPedia. Por favor, escucha las instrucciones. En este sitio puedes buscar artículos en wikipedia mediante asistencia auditiva. Para buscar, solo introduce con el teclado tu búsqueda, y pulsa enter para obtener resultados. Cada vez que introduzcas una palabra, presiona la barra espaciadora para escuchar la última palabra que escribiste. Si quieres cambiar de idioma a inglés, presiona la tecla shift. Presiona la tecla escape para borrar todo el texto que has ingresado. Si necesitas volver a escuchar las intrucciones presiona la tecla control.'
+    data: {
+        es: {
+            introduction: 'Bienvenido a BlindPedia. Por favor, escucha las instrucciones. En este sitio puedes buscar artículos en wikipedia mediante asistencia auditiva. Para buscar, solo introduce con el teclado tu búsqueda, y pulsa enter para obtener resultados. Cada vez que introduzcas una palabra, presiona la barra espaciadora para escuchar la última palabra que escribiste. Si quieres cambiar de idioma a inglés, presiona la tecla shift. Si quieres borrar todo el texto que has ingresado, presiona la tecla escape. Si necesitas volver a escuchar las intrucciones presiona la tecla control.',
+            instructions: {
+                a: [
+                    "Para buscar, solo introduce con el teclado tu búsqueda, y pulsa enter para obtener resultados.",
+                    "Cada vez que introduzcas una palabra, presiona la barra espaciadora para escuchar la última palabra que escribiste.",
+                    "Si quieres cambiar de idioma a inglés, presiona la tecla shift.",
+                    "Si quieres borrar todo el texto que has ingresado, presiona la tecla escape.",
+                    "Si necesitas volver a escuchar las intrucciones presiona la tecla control."                    
+                ],
+                b: [
+                    "Para navegar en los resultados, usa las flechas de arriba o abajo",
+                    "Presiona la tecla intro cuando escuches el resultado en el que estás interesado para conocer más acerca de el",
+                    "Para volver a buscar, presiona la tecla escape"
+                ]
+            },
+            errors: {
+                emptySearch : 'No has ingresado nada para buscar',
+                emptyArticle: 'No has seleccionado ningún artículo',
+                fetchData: 'Hubo un error al procesar tu petición. Intentalo nuevamente'
+            },
+            notifications: {
+                langChange: 'The lenguague has been changed to english. Press control to hear the instructions on English',
+                deleteText: "Se ha eliminado todo el texto ingresado",
+                searchReady: "Ya puedes volver a hacer otra busqueda",
+                backToResults: "Hemos regresado a la lista de resultados. Recuerda que debes usar las flechas de arriba y abajo para seleccionar un artículo y dar enter para saber más del que te interese. Si quieres hacer una búsqueda diferente, oprime la tecla escape."
+            },
+            pageText: {
+                welcome: 'Bienvenido a BlindPedia',
+                readInstructions: 'Por favor, lee las instrucciones',
+                about: 'En este sitio puedes buscar artículos en wikipedia mediante asistencia auditiva.'
+            },
+            search: {
+                title: "Usa el cuadro de texto para realizar tu busqueda",
+                label: "¿Qué quieres buscar?"
+            }
+        },
+        en: {
+            introduction: 'Welcome to BlindPedia. Please, listen to the instructions. In this site, you are able to search articles in wikipedia using hearing assistance. To make a search, just introduce with the keyboard what are you looking for and then press enter to obtain results. Each time you introduce a word, press the space bar to listen the last word you typed. If you want to change the language to Spanish, press the shif key. If you need to erase all the typed text, press the escape letter. If you want to hear again the instructions press the control key.',
+            instructions: {
+                a: [
+                    "To make a search, just introduce with the keyboard what are you looking for and then press enter to obtain results.",
+                    "Each time you introduce a word, press the space bar to listen the last word you typed.",
+                    "If you want to change the language to Spanish, press the shif key.",
+                    "If you need to erase all the typed text, press the escape letter.",
+                    "If you want to hear again the instructions press the control key."
+                ],
+                b: [
+                    "To navigate through the results, use the up and down arrow keys.",
+                    "Then press the intro key when you heard the article you are interested in to know more about it",
+                    "To make another search, press the espace key."
+                ]
+            },
+            errors: {
+                emptySearch: 'You have not write anything to search',
+                emptyArticle: 'You have not selected any article',
+                fetchData: 'There was an error on the server, please, try again'
+            },
+            notifications: {
+                langChange: 'Se ha cambiado el lenguaje a español. Presiona control para escuchar las instrucciones',
+                deleteText: "The  writed text has been deleted",
+                searchReady: "Now you can make another search",
+                backToResults: "We are back to the results list. Remember that you have to use the up and down arrow keys to navigate through the articles and press enter to listen more about the one that interest you. If you want to make a different search, press the escape key."
+            },
+            pageText: {
+                welcome: 'Welcome to BlindPedia',
+                readInstructions: 'Please, read the instructions',
+                about: 'In this site, you can make searchs in wikipedia using hearing assistance.'
+            },
+            search: {
+                title: "Use the text box to make a search",
+                label: "What are you looking for?"
+            }
+        }
     }
 }
