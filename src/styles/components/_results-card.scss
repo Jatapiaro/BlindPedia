@@ -1,0 +1,20 @@
+.results-card {
+
+    font-weight: $bold;
+
+    &:hover {
+        background-color: $mid-purple !important;
+        color: #fff;
+    }
+
+    &.hovered {
+        background-color: $mid-purple !important;
+        color: #fff;
+    }
+
+    .content {
+        margin-left: 10%;
+        margin-right: 10%;
+    }
+
+}

@@ -1,0 +1,21 @@
+.btn {
+    cursor: pointer;
+}
+
+.btn-round {
+    border: none;
+    border-radius: 17px;
+}
+
+.btn-iso-blade {
+    font-size: $lead-2;
+    font-weight: $bold;
+    background-color: $purple;
+    color: $iso-blade-color;
+    &:hover {
+        color: #000;
+        background-color: #fff;
+    }
+    margin-top: 10px;
+}
+
