@@ -25,7 +25,7 @@ export default class Header extends React.Component {
                             <NavItem>
                                 <NavLink
                                     className="button-nav-link"
-                                    onClick={() => {console.log("TODO toggle lang")}}>Español
+                                    onClick={this.props.changeLang}>Español
                                 </NavLink>
                             </NavItem>
                         </Nav>

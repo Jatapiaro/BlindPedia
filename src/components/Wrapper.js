@@ -14,6 +14,7 @@ import {
 } from 'reactstrap';
 import { FaWikipediaW } from 'react-icons/fa';
 import Result from '../models/Result';
+import CustomModal from './CustomModal';
 
 export default class Wrapper extends React.Component {
 
@@ -32,10 +33,16 @@ export default class Wrapper extends React.Component {
             play: false,
             pause: false
         },
+        modal: {
+            open: false,
+            title: '',
+            content: ''
+        },
+        moveToResults: false,
         results: [],
         selected: -1,
         selectionChange: false,
-        status: 0, // 0 - searching, 1 - navigating
+        status: 0, // 0 - searching, 1 - navigating, 2 - reading article
         value: '',
     }
 
@@ -44,7 +51,8 @@ export default class Wrapper extends React.Component {
      * @param search to look at wikipedia
      */
     callWiki () {
-        this.wikipediaService.makeSearch(this.state.value.trim())
+        const lang = (this.state.lang === 'es-MX')? 'es' : 'en';
+        this.wikipediaService.makeSearch(this.state.value.trim(), lang)
             .then((res) => {
                 
                 const numberOfResults = res[1].length;
@@ -54,11 +62,10 @@ export default class Wrapper extends React.Component {
                     let r = new Result(res[1][i], res[2][i], res[3][i], this.state.lang);
                     results.push(r);
                 }
-                console.log(results);
                 
                 let voice = `Buscando ${res[0]} en Wikipedia...Se obtuvieron ${numberOfResults} resultados. `;
                 if ( numberOfResults > 0 ) {
-                    this.setState({ results: results, status: 1 });
+                    this.setState({ results: results, status: 1, moveToResults: true });
                     voice += `Para navegar en los resultados, usa las flechas de arriba o abajo y presiona la tecla intro cuando escuches el resultado en el que estás interesado para conocer más acerca de él. Para volver a buscar, presiona la tecla escape`;
                 } else {
                     voice += "Al no haber resultados se ha limpiado el texto a buscar. Por favor realiza otra búsqueda";
@@ -70,6 +77,42 @@ export default class Wrapper extends React.Component {
             .catch((err) => {
                 this.switchBuffersSimple(`Hubo un error al procesar tu petición. Intentalo nuevamente`);
             });
+    }
+
+    callWikiArticle() {
+        const lang = (this.state.lang === 'es-MX') ? 'es' : 'en';
+        const titles = this.state.results[this.state.selected].article;
+        this.wikipediaService.makeArticleExtract(titles, lang)
+            .then((res) => {
+                const query = res.query.pages;
+                let article = undefined;
+                for (let k in query) {
+                    if (query.hasOwnProperty(k)) {
+                        article = query[k].extract;
+                    }
+                }
+                const modal = {
+                    open: true,
+                    content: article,
+                    title: titles
+                }
+                let voice = `Voy a proceder a leer el articulo ${titles}. Si deseas que me detenga, oprime la tecla escape. ${article}`;
+                this.setState({
+                    modal: modal,
+                    status: 2
+                });
+                this.switchBuffersSimple(voice);
+            }, titles)
+            .catch((err) => {
+                console.log(err);
+            });
+    }
+
+    changeLang = () => {
+        let lang = (this.state.lang === 'es-MX')? 'en-EN' : 'es-MX';
+        this.setState({
+            lang: lang
+        });
     }
 
     /**
@@ -89,12 +132,15 @@ export default class Wrapper extends React.Component {
         this.nameInput.focus();
         this.setState({
             introduction: {
-                play: true, // TODO remove,
+                play: false, //TODO reset to true
                 content: this.props.intro.es,
             }
         });
     }
 
+    /**
+     * Triggered when the react state is updated
+     */
     componentDidUpdate() {
         if (this.state.selectionChange) {
             var x = document.getElementById(this.state.selected);
@@ -105,9 +151,12 @@ export default class Wrapper extends React.Component {
         }
     }
 
+    /**
+     * Method that handles the search event
+     */
     makeSearch = () => {
         if ( this.state.value.trim().length === 0 ) {
-            this.sendDataToVoiceKeyboard("No has ingresado nada para buscar");
+            this.switchBuffersSimple("No has ingresado nada para buscar");
         } else {
             this.callWiki();
         }
@@ -172,7 +221,6 @@ export default class Wrapper extends React.Component {
      * Event binder to handle all the special keys
      */
     onKeyDown = (e) => {
-        console.log(e.keyCode);
         // Handle delete
         if (e.keyCode === 8 && this.state.value.length > 0) {
             this.switchBuffersSimple("delete", "en-US");
@@ -183,14 +231,11 @@ export default class Wrapper extends React.Component {
             if ( this.state.status === 0 ) {
                 this.makeSearch();
             } else if (this.state.status === 1) {
-                /*this.setState({
-                    keyboardInput: {
-                        play: false,
-                        pause: true,
-                        content: ''
-                    }
-                });*/
-                this.switchBuffersSimple("delete");
+                if ( this.state.selected == -1 ) {
+                    this.switchBuffersSimple("No has seleccionado ningún artículo");
+                } else {
+                    this.callWikiArticle();
+                }
             }
         }
 
@@ -210,7 +255,7 @@ export default class Wrapper extends React.Component {
             if ( this.state.status === 0 ) {
                 this.setState({ value: "" });
                 this.switchBuffersSimple("Se ha eliminado todo el texto ingresado");
-            } else {
+            } else if ( this.state.status === 1 ) {
                 this.setState({ 
                     value: "", 
                     results: [], 
@@ -218,6 +263,17 @@ export default class Wrapper extends React.Component {
                     selected: -1
                 });
                 this.switchBuffersSimple("Ya puedes volver a hacer otra busqueda");
+            } else if ( this.state.status === 2 ) {
+                const modal = {
+                    open: false,
+                    content: '',
+                    title: ''
+                };
+                this.switchBuffersSimple("Hemos regresado a la lista de resultados. Recuerda que debes usar las flechas de arriba y abajo para seleccionar un artículo y dar enter para saber más del que te interese. Si quieres hacer una búsqueda diferente, oprime la tecla escape");
+                this.setState({
+                    modal: modal,
+                    status: 1,
+                });
             }
         }
 
@@ -270,8 +326,8 @@ export default class Wrapper extends React.Component {
         return (
             <div>
 
-                <Header />
-
+                <Header changeLang={this.changeLang}/>
+                <CustomModal modal={this.state.modal} handleKeyDown={this.onKeyDown}/>
                 <div className="home">
                     <Jumbotron>
                         <h1 className="display-3">Bienvenido a BlindPedia <FaWikipediaW size={"1.5em"} /></h1>
@@ -308,24 +364,29 @@ export default class Wrapper extends React.Component {
                             </Card>
                         </div>
                     </Jumbotron>
-                    <div className="projects-label">
-                        <center>
-                            <h1>{(this.state.lang === 'es-MX') ? 'Lista de Resultados' : 'Results List'}</h1>
-                        </center>
-                    </div>
-                    <div>
-                        {
-                            this.state.results.map((r, i) => 
-                                <div id={i} className={`results-card ${this.state.selected === i? 'hovered' : ''}`} key={i}>
-                                    <div className="content">
-                                        <h3>{r.title}</h3>
-                                        <h4>{r.description}</h4>
-                                        <hr className="black" />
-                                    </div>
-                                </div>
-                            )
-                        }
-                    </div>
+                    {
+                        this.state.results.length > 0 &&
+                        <div>
+                            <div id="results-list" className="projects-label">
+                                <center>
+                                    <h1>{(this.state.lang === 'es-MX') ? 'Lista de Resultados' : 'Results List'}</h1>
+                                </center>
+                            </div>
+                            <div>
+                                {
+                                    this.state.results.map((r, i) =>
+                                        <div id={i} className={`results-card ${this.state.selected === i ? 'hovered' : ''}`} key={i}>
+                                            <div className="content">
+                                                <h3>{r.title}</h3>
+                                                <h4>{r.description}</h4>
+                                                <hr className="black" />
+                                            </div>
+                                        </div>
+                                    )
+                                }
+                            </div>
+                        </div>
+                    }
                 </div>
 
                 {

@@ -1,0 +1,21 @@
+.modal-full {
+  min-width: 100%;
+  margin: 0;
+  span {
+    font-size: 50px;
+    font-weight: $bold;
+  }
+}
+
+.modal-full .modal-content {
+  min-height: 100vh;
+}
+
+.modal-title {
+  font-size: $regular;
+  font-weight: $bold;
+}
+
+.modal-body {
+  font-size: 24px;
+}
