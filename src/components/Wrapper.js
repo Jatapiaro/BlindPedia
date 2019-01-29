@@ -20,7 +20,7 @@ import Footer from './Footer';
 export default class Wrapper extends React.Component {
 
     state = {
-        boot: true,
+        boot: false,
         introduction: {
             play: false,
             pause: false,
@@ -44,7 +44,7 @@ export default class Wrapper extends React.Component {
         simpleLang: 'es',
         selected: -1,
         selectionChange: false,
-        status: 0, // 0 - searching, 1 - navigating, 2 - reading article
+        status: -1, // 0 - searching, 1 - navigating, 2 - reading article
         value: '',
     }
 
@@ -157,10 +157,7 @@ export default class Wrapper extends React.Component {
     componentDidMount() {
         this.nameInput.focus();
         this.setState({
-            introduction: {
-                play: true,
-                content: this.getMessageFromObjectString(`introduction`),
-            }
+            boot: true
         });
     }
 
@@ -259,9 +256,11 @@ export default class Wrapper extends React.Component {
      * Event binder to catch everytime the value to search changes
      */
     onChange = (e) => {
-        this.setState({
-            value: e.target.value
-        });
+        if ( this.state.status !== -1 ) {
+            this.setState({
+                value: e.target.value
+            });
+        }
     }
 
     /**
@@ -269,7 +268,6 @@ export default class Wrapper extends React.Component {
      */
     onKeyDown = (e) => {
 
-        console.log(e.keyCode);
 
         // Handle delete
         if (e.keyCode === 8 && this.state.value.length > 0) {
@@ -278,6 +276,15 @@ export default class Wrapper extends React.Component {
 
         // Handle enter
         if (e.keyCode === 13) {
+
+            if (this.state.status === -1) {
+                const message = this.getMessageFromObjectString("introduction");
+                this.setState({
+                    status: 0,
+                }, () => { this.switchBuffersSimple(message) });
+                return;
+            }
+
             if ( this.state.status === 0 ) {
                 this.makeSearch();
             } else if (this.state.status === 1) {
@@ -397,7 +404,7 @@ export default class Wrapper extends React.Component {
                             <p>{this.getMessageFromObjectString('pageText.about')}</p>
                             <ol className="lead-3">
                                 {
-                                    this.state.status === 0 &&
+                                    this.state.status <= 0 &&
                                     this.state.simpleLang === "es" &&
                                     this.props.data.es.instructions.a.map((el, i) => 
                                         <li key={i}>{el}</li>
@@ -405,7 +412,7 @@ export default class Wrapper extends React.Component {
                                     
                                 }
                                 {
-                                    this.state.status === 0 &&
+                                    this.state.status <= 0 &&
                                     this.state.simpleLang === "en" &&
                                     this.props.data.en.instructions.a.map((el, i) =>
                                         <li key={i}>{el}</li>
@@ -444,7 +451,7 @@ export default class Wrapper extends React.Component {
                                                 value={this.state.value} />
                                         </InputGroup>
                                         {
-                                            this.state.status == 0 &&
+                                            this.state.status <= 0 &&
                                             <Button className="btn-round btn-block btn-lg btn-iso-blade" onClick={this.makeSearch}>
                                                 <center>{this.getMessageFromObjectString('search.buttonSearch')}</center>
                                             </Button>
@@ -627,6 +634,7 @@ Wrapper.defaultProps = {
             introduction: 'Bienvenido a BlindPedia. Por favor, escucha las instrucciones. En este sitio puedes buscar artículos en wikipedia mediante asistencia auditiva. Para buscar, solo introduce con el teclado tu búsqueda, y pulsa enter para obtener resultados. Cada vez que introduzcas una palabra, presiona la barra espaciadora para escuchar la última palabra que escribiste. Si quieres cambiar de idioma a inglés, presiona la tecla shift. Si quieres borrar todo el texto que has ingresado, presiona la tecla escape. Si necesitas volver a escuchar las intrucciones presiona la tecla control.',
             instructions: {
                 a: [
+                    "Oprime cualquier tecla para activar el sistema",
                     "Para buscar, solo introduce con el teclado tu búsqueda, y pulsa enter para obtener resultados.",
                     "Cada vez que introduzcas una palabra, presiona la barra espaciadora para escuchar la última palabra que escribiste.",
                     "Si quieres cambiar de idioma a inglés, presiona la tecla shift.",
@@ -667,6 +675,7 @@ Wrapper.defaultProps = {
             introduction: 'Welcome to BlindPedia. Please, listen to the instructions. In this site, you are able to search articles in wikipedia using hearing assistance. To make a search, just introduce with the keyboard what are you looking for and then press enter to obtain results. Each time you introduce a word, press the space bar to listen the last word you typed. If you want to change the language to Spanish, press the shif key. If you need to erase all the typed text, press the escape letter. If you want to hear again the instructions press the control key.',
             instructions: {
                 a: [
+                    "Press any key to activate the page",
                     "To make a search, just introduce with the keyboard what are you looking for and then press enter to obtain results.",
                     "Each time you introduce a word, press the space bar to listen the last word you typed.",
                     "If you want to change the language to Spanish, press the shif key.",
