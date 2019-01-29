@@ -12,9 +12,10 @@ import {
     InputGroup, 
     InputGroupAddon
 } from 'reactstrap';
-import { FaWikipediaW } from 'react-icons/fa';
+import { FaWikipediaW, FaAssistiveListeningSystems } from 'react-icons/fa';
 import Result from '../models/Result';
 import CustomModal from './CustomModal';
+import Footer from './Footer';
 
 export default class Wrapper extends React.Component {
 
@@ -93,6 +94,9 @@ export default class Wrapper extends React.Component {
             });
     }
 
+    /**
+     * Fetch the full wikipedia article
+     */
     callWikiArticle() {
         const lang = (this.state.lang === 'es-MX') ? 'es' : 'en';
         const titles = this.state.results[this.state.selected].article;
@@ -180,6 +184,17 @@ export default class Wrapper extends React.Component {
         const key = `${this.state.simpleLang}.${objectString}`;
         const element = key.split(".").reduce(function (o, x) { return (o[x] !== null) ? o[x] : '' }, this.props.data);
         return (element) ? element : '';
+    }
+
+    /**
+     * Button binding to hear the full article
+     */
+    listenFullArticle = (index) => {
+        this.setState({
+            selected: index
+        }, () => {
+            this.callWikiArticle();
+        });
     }
 
     /**
@@ -428,9 +443,18 @@ export default class Wrapper extends React.Component {
                                                 onKeyDown={this.onKeyDown}
                                                 value={this.state.value} />
                                         </InputGroup>
-                                        <Button className="btn-round btn-block btn-lg btn-iso-blade" onClick={this.makeSearch}>
-                                            <center>Buscar</center>
-                                        </Button>
+                                        {
+                                            this.state.status == 0 &&
+                                            <Button className="btn-round btn-block btn-lg btn-iso-blade" onClick={this.makeSearch}>
+                                                <center>{this.getMessageFromObjectString('search.buttonSearch')}</center>
+                                            </Button>
+                                        }
+                                        {
+                                            this.state.status > 0 &&
+                                            <Button className="btn-round btn-block btn-lg btn-iso-blade" onClick={this.resetSearch}>
+                                                <center>{this.getMessageFromObjectString('search.buttonReset')}</center>
+                                            </Button>
+                                        }
                                     </center>
                                 </CardBody>
                             </Card>
@@ -451,6 +475,9 @@ export default class Wrapper extends React.Component {
                                             <div className="content">
                                                 <h3>{r.title}</h3>
                                                 <h4>{r.description}</h4>
+                                                <Button onClick={() => { this.listenFullArticle(i) }} className="btn-round btn-block btn-lg btn-iso-blade">
+                                                    {`${this.getMessageFromObjectString('pageText.hear')} `}<FaAssistiveListeningSystems/>
+                                                </Button>
                                                 <hr className="black" />
                                             </div>
                                         </div>
@@ -460,6 +487,7 @@ export default class Wrapper extends React.Component {
                         </div>
                     }
                 </div>
+                <Footer />
 
                 {
                     /* Voice feedback for keyboard writing*/
@@ -485,6 +513,20 @@ export default class Wrapper extends React.Component {
 
             </div>
         );
+    }
+
+    /**
+     * Reset search from button press
+     */
+    resetSearch = () => {
+        this.setState({
+            value: "",
+            results: [],
+            status: 0,
+            selected: -1
+        });
+        const message = this.getMessageFromObjectString('notifications.searchReady');
+        this.switchBuffersSimple(message);
     }
 
     /**
@@ -609,13 +651,16 @@ Wrapper.defaultProps = {
                 backToResults: "Hemos regresado a la lista de resultados. Recuerda que debes usar las flechas de arriba y abajo para seleccionar un artículo y dar enter para saber más del que te interese. Si quieres hacer una búsqueda diferente, oprime la tecla escape."
             },
             pageText: {
+                hear: 'Escuchar articulo completo',
                 welcome: 'Bienvenido a BlindPedia',
                 readInstructions: 'Por favor, lee las instrucciones',
                 about: 'En este sitio puedes buscar artículos en wikipedia mediante asistencia auditiva.'
             },
             search: {
                 title: "Usa el cuadro de texto para realizar tu busqueda",
-                label: "¿Qué quieres buscar?"
+                label: "¿Qué quieres buscar?",
+                buttonSearch: "Buscar",
+                buttonReset: "Reiniciar búsqueda",
             }
         },
         en: {
@@ -646,13 +691,16 @@ Wrapper.defaultProps = {
                 backToResults: "We are back to the results list. Remember that you have to use the up and down arrow keys to navigate through the articles and press enter to listen more about the one that interest you. If you want to make a different search, press the escape key."
             },
             pageText: {
+                hear: 'Listen full article',
                 welcome: 'Welcome to BlindPedia',
                 readInstructions: 'Please, read the instructions',
                 about: 'In this site, you can make searchs in wikipedia using hearing assistance.'
             },
             search: {
                 title: "Use the text box to make a search",
-                label: "What are you looking for?"
+                label: "What are you looking for?",
+                buttonSearch: "Search",
+                buttonReset: "Reset Search",
             }
         }
     }
