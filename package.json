@@ -25,7 +25,8 @@
   },
   "scripts": {
     "build": "webpack",
-    "serve": "webpack-dev-server"
+    "serve": "webpack-dev-server",
+    "deploy": "git add src/* && git commit -m \"deploy\" && git push origin master && git push heroku master"
   },
   "devDependencies": {
     "webpack-cli": "^3.2.1"

@@ -634,7 +634,7 @@ Wrapper.defaultProps = {
             introduction: 'Bienvenido a BlindPedia. Por favor, escucha las instrucciones. En este sitio puedes buscar artículos en wikipedia mediante asistencia auditiva. Para buscar, solo introduce con el teclado tu búsqueda, y pulsa enter para obtener resultados. Cada vez que introduzcas una palabra, presiona la barra espaciadora para escuchar la última palabra que escribiste. Si quieres cambiar de idioma a inglés, presiona la tecla shift. Si quieres borrar todo el texto que has ingresado, presiona la tecla escape. Si necesitas volver a escuchar las intrucciones presiona la tecla control.',
             instructions: {
                 a: [
-                    "Oprime cualquier tecla para activar el sistema",
+                    "Oprime enter para activar el sistema",
                     "Para buscar, solo introduce con el teclado tu búsqueda, y pulsa enter para obtener resultados.",
                     "Cada vez que introduzcas una palabra, presiona la barra espaciadora para escuchar la última palabra que escribiste.",
                     "Si quieres cambiar de idioma a inglés, presiona la tecla shift.",
@@ -675,7 +675,7 @@ Wrapper.defaultProps = {
             introduction: 'Welcome to BlindPedia. Please, listen to the instructions. In this site, you are able to search articles in wikipedia using hearing assistance. To make a search, just introduce with the keyboard what are you looking for and then press enter to obtain results. Each time you introduce a word, press the space bar to listen the last word you typed. If you want to change the language to Spanish, press the shif key. If you need to erase all the typed text, press the escape letter. If you want to hear again the instructions press the control key.',
             instructions: {
                 a: [
-                    "Press any key to activate the page",
+                    "Press enter to activate the page",
                     "To make a search, just introduce with the keyboard what are you looking for and then press enter to obtain results.",
                     "Each time you introduce a word, press the space bar to listen the last word you typed.",
                     "If you want to change the language to Spanish, press the shif key.",
