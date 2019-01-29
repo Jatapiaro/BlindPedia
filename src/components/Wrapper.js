@@ -158,7 +158,7 @@ export default class Wrapper extends React.Component {
         this.nameInput.focus();
         this.setState({
             introduction: {
-                play: false, //TODO reset to true
+                play: true,
                 content: this.getMessageFromObjectString(`introduction`),
             }
         });
